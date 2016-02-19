@@ -33,6 +33,8 @@
 #define MAX_WERD_LENGTH        (inT64) 128
 #define NO_RATING               -1
 
+#define kNumApoChars 3
+
 /** Struct used to hold temporary information about fragments. */
 struct CHAR_FRAGMENT_INFO {
   UNICHAR_ID unichar_id;
@@ -692,6 +694,8 @@ class Dict {
     wordseg_rating_adjust_factor_ = f;
   }
 
+  bool is_apostrophe_like(UNICHAR_ID unichar_id);
+
  private:
   /** Private member variables. */
   Image* image_ptr_;
@@ -723,6 +727,7 @@ class Dict {
   DawgInfoVector hyphen_active_dawgs_;
   DawgInfoVector hyphen_constraints_;
   bool last_word_on_line_;
+  UNICHAR_ID apo_unichar_ids_[kNumApoChars];
   // Dawgs.
   DawgVector dawgs_;
   SuccessorListsVector successors_;

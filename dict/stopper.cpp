@@ -153,7 +153,7 @@ bool Dict::AcceptableChoice(BLOB_CHOICE_LIST_VECTOR *Choices,
   bool no_dang_ambigs = (GetMaxFixedLengthDawgIndex() >= 0 ||
                          NoDangerousAmbig(BestChoice, fixpt, true,
                                           Choices, modified_blobs));
-  bool is_valid_word = valid_word_permuter(BestChoice->permuter(), false);
+  bool is_valid_word = valid_word(*BestChoice, false);
   bool is_case_ok = case_ok(*BestChoice, getUnicharset());
 
   if (stopper_debug_level >= 1)
@@ -805,7 +805,8 @@ int Dict::LengthOfShortestAlphaRun(const WERD_CHOICE &WordChoice) {
   int shortest = MAX_INT32;
   int curr_len = 0;
   for (int w = 0; w < WordChoice.length(); ++w) {
-    if (getUnicharset().get_isalpha(WordChoice.unichar_id(w))) {
+    if (getUnicharset().get_isalpha(WordChoice.unichar_id(w)) ||
+        is_apostrophe_like(WordChoice.unichar_id(w))) {
       curr_len++;
     } else if (curr_len > 0) {
       if (curr_len < shortest) shortest = curr_len;

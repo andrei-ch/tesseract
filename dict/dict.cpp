@@ -180,6 +180,8 @@ Dict::Dict(Image* image_ptr)
   hyphen_word_ = NULL;
   last_word_on_line_ = false;
   hyphen_unichar_id_ = INVALID_UNICHAR_ID;
+  for (int i = 0; i < kNumApoChars; i ++)
+    apo_unichar_ids_[i] = INVALID_UNICHAR_ID;
   document_words_ = NULL;
   pending_words_ = NULL;
   freq_dawg_ = NULL;
@@ -199,6 +201,9 @@ void Dict::Load() {
   if (dawgs_.length() != 0) this->End();
 
   hyphen_unichar_id_ = getUnicharset().unichar_to_id(kHyphenSymbol);
+  apo_unichar_ids_[0] = getUnicharset().unichar_to_id("'");
+  apo_unichar_ids_[1] = getUnicharset().unichar_to_id("\xe2\x80\x98");
+  apo_unichar_ids_[2] = getUnicharset().unichar_to_id("\xe2\x80\x99'");
   TessdataManager &tessdata_manager =
     getImage()->getCCUtil()->tessdata_manager;
 
@@ -771,8 +776,55 @@ int Dict::valid_word(const WERD_CHOICE &word, bool numbers_ok) {
   }
   delete[] active_dawgs;
   delete[] constraints;
-  return valid_word_permuter(dawg_args.permuter, numbers_ok) ?
-    dawg_args.permuter : NO_PERM;
+  
+  if (valid_word_permuter(dawg_args.permuter, numbers_ok) && dawg_args.permuter != NO_PERM)
+	return dawg_args.permuter;
+
+#if 0  
+  static bool _apo_hack = false;
+  if (!_apo_hack)
+	return NO_PERM;
+
+  int apo_index = -1;
+  for (int i = 0; i < kNumApoChars; i ++) {
+    apo_index = word_ptr->find_unichar_id(apo_unichar_ids_[i]);
+    if (apo_index >= 0)
+		break;
+  }
+  if (apo_index < 0)
+    return NO_PERM;
+
+  int temp_perm;
+  if (apo_index > 0) {
+    WERD_CHOICE temp_word(*word_ptr);
+    temp_word.remove_unichar_ids(0, apo_index+1);
+    temp_word.populate_unichars(getUnicharset());
+	temp_perm = valid_word(temp_word, numbers_ok);
+	if (temp_perm == NO_PERM)
+      return NO_PERM;
+  }
+  if (apo_index < word_ptr->length()-1)
+  {
+    WERD_CHOICE temp_word(*word_ptr);
+    temp_word.remove_unichar_ids(apo_index, word_ptr->length()-apo_index);
+	temp_word.populate_unichars(getUnicharset());
+    if (valid_word(temp_word, numbers_ok) == NO_PERM)
+      return NO_PERM;
+  }
+  return temp_perm;
+#else
+  return NO_PERM;
+#endif
+}
+
+bool Dict::is_apostrophe_like(UNICHAR_ID unichar_id)
+{
+  if (unichar_id == INVALID_UNICHAR_ID)
+	return false;
+  for (int i = 0; i < kNumApoChars; i ++)
+    if (apo_unichar_ids_[i] == unichar_id)
+	  return true;
+  return false;
 }
 
 bool Dict::valid_punctuation(const WERD_CHOICE &word) {
@@ -783,10 +835,12 @@ bool Dict::valid_punctuation(const WERD_CHOICE &word) {
   int new_len = 0;
   for (i = 0; i <= last_index; ++i) {
     UNICHAR_ID unichar_id = (word.unichar_id(i));
-    if (getUnicharset().get_ispunctuation(unichar_id)) {
+    bool is_apostrophe = is_apostrophe_like(unichar_id);
+    if (getUnicharset().get_ispunctuation(unichar_id) && !is_apostrophe) {
       new_word.append_unichar_id(unichar_id, 1, 0.0, 0.0);
     } else if (!getUnicharset().get_isalpha(unichar_id) &&
-               !getUnicharset().get_isdigit(unichar_id)) {
+               !getUnicharset().get_isdigit(unichar_id) &&
+			   !is_apostrophe) {
       return false;  // neither punc, nor alpha, nor digit
     } else if ((new_len = new_word.length()) == 0 ||
                new_word.unichar_id(new_len-1) != Dawg::kPatternUnicharID) {

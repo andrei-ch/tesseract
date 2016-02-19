@@ -306,6 +306,7 @@ class WERD_CHOICE {
   }
 
   bool contains_unichar_id(UNICHAR_ID unichar_id) const;
+  int find_unichar_id(UNICHAR_ID unichar_id) const;
   void remove_unichar_ids(int index, int num);
   inline void remove_last_unichar_id() { --length_; }
   inline void remove_unichar_id(int index) { this->remove_unichar_ids(index, 1); }

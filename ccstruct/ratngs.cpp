@@ -162,6 +162,23 @@ bool WERD_CHOICE::contains_unichar_id(UNICHAR_ID unichar_id) const {
 }
 
 /**
+ * find_unichar_id
+ *
+ * Returns index of the first occurrence of given unichar_id, -1 otherwise.
+ */
+int WERD_CHOICE::find_unichar_id(UNICHAR_ID unichar_id) const {
+  if (unichar_id == INVALID_UNICHAR_ID)
+	return -1;
+  for (int i = 0; i < length_; ++i) {
+    if (unichar_ids_[i] == unichar_id) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+
+/**
  * remove_unichar_ids
  *
  * Removes num unichar ids starting from index start from unichar_ids_
